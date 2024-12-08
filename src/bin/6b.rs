@@ -1,7 +1,7 @@
+use itertools::Itertools;
 use std::collections::HashSet;
 use std::io::stdin;
 use std::ops::{Add, Mul};
-use itertools::Itertools;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Coordinates {
@@ -66,12 +66,9 @@ impl Direction {
 }
 
 fn parse_char_matrix() -> Vec<Vec<char>> {
-    let matrix: Vec<Vec<char>> = stdin().lines()
-        .map(|line_res|
-            line_res.expect("stream error")
-                .chars()
-                .collect()
-        )
+    let matrix: Vec<Vec<char>> = stdin()
+        .lines()
+        .map(|line_res| line_res.expect("stream error").chars().collect())
         .collect();
 
     assert!(matrix.iter().map(|row| row.len()).all_equal());
@@ -91,9 +88,11 @@ fn get_field_size(matrix: &[Vec<char>]) -> Coordinates {
 }
 
 fn get_guard_position(matrix: &[Vec<char>]) -> Coordinates {
-    let (x, y) = matrix.iter().enumerate().find_map(|(y, row)| {
-        row.iter().position(|&c| c == '^').map(|x| (x, y))
-    }).expect("no guard found");
+    let (x, y) = matrix
+        .iter()
+        .enumerate()
+        .find_map(|(y, row)| row.iter().position(|&c| c == '^').map(|x| (x, y)))
+        .expect("no guard found");
 
     Coordinates {
         x: x as i64,
@@ -102,18 +101,29 @@ fn get_guard_position(matrix: &[Vec<char>]) -> Coordinates {
 }
 
 fn get_obstacles(matrix: &[Vec<char>]) -> HashSet<Coordinates> {
-    matrix.iter().enumerate().flat_map(|(y, row)| {
-        row.iter().enumerate().filter_map(move |(x, &c)| {
-            if c == '#' {
-                Some(Coordinates { x: x as i64, y: y as i64 })
-            } else {
-                None
-            }
+    matrix
+        .iter()
+        .enumerate()
+        .flat_map(|(y, row)| {
+            row.iter().enumerate().filter_map(move |(x, &c)| {
+                if c == '#' {
+                    Some(Coordinates {
+                        x: x as i64,
+                        y: y as i64,
+                    })
+                } else {
+                    None
+                }
+            })
         })
-    }).collect()
+        .collect()
 }
 
-fn trace_iter(obstacles: HashSet<Coordinates>, start_position: Coordinates, start_direction: Direction) -> impl Iterator<Item = (Direction, Coordinates)> {
+fn trace_iter(
+    obstacles: HashSet<Coordinates>,
+    start_position: Coordinates,
+    start_direction: Direction,
+) -> impl Iterator<Item = (Direction, Coordinates)> {
     let mut current_pos = start_position;
     let mut direction = Direction::Up;
 
@@ -132,18 +142,29 @@ fn trace_iter(obstacles: HashSet<Coordinates>, start_position: Coordinates, star
     std::iter::once((start_direction, start_position)).chain(steps)
 }
 
-fn generate_trace(field_size: Coordinates, obstacles: HashSet<Coordinates>, start_position: Coordinates, start_direction: Direction) -> Vec<(Direction, Coordinates)> {
+fn generate_trace(
+    field_size: Coordinates,
+    obstacles: HashSet<Coordinates>,
+    start_position: Coordinates,
+    start_direction: Direction,
+) -> Vec<(Direction, Coordinates)> {
     trace_iter(obstacles, start_position, start_direction)
         .take_while(|(_, coords)| coords.is_within_bounds(field_size))
         .collect()
 }
 
-fn possible_diversion_points(field_size: Coordinates, trace: Vec<(Direction, Coordinates)>, obstacles: &HashSet<Coordinates>) -> Vec<Coordinates> {
+fn possible_diversion_points(
+    field_size: Coordinates,
+    trace: Vec<(Direction, Coordinates)>,
+    obstacles: &HashSet<Coordinates>,
+) -> Vec<Coordinates> {
     let Some((start_direction, start_position)) = trace.first().copied() else {
         return vec![];
     };
 
-    trace.into_iter().skip(1)
+    trace
+        .into_iter()
+        .skip(1)
         .map(|(_, coords)| coords)
         .unique()
         .filter_map(|potential_obstacle| {
@@ -155,7 +176,8 @@ fn possible_diversion_points(field_size: Coordinates, trace: Vec<(Direction, Coo
                 .all_unique();
 
             is_loop.then_some(potential_obstacle)
-        }).collect()
+        })
+        .collect()
 }
 
 fn main() {
@@ -165,8 +187,16 @@ fn main() {
     let guard_pos = get_guard_position(&matrix);
     let obstacles = get_obstacles(&matrix);
 
-    let trace = generate_trace(field_size, obstacles.iter().copied().collect(), guard_pos, Direction::Up);
-    println!("Unique visited fields: {}", trace.iter().map(|(_, coords)| coords).unique().count());
+    let trace = generate_trace(
+        field_size,
+        obstacles.iter().copied().collect(),
+        guard_pos,
+        Direction::Up,
+    );
+    println!(
+        "Unique visited fields: {}",
+        trace.iter().map(|(_, coords)| coords).unique().count()
+    );
 
     let possible_diversion_points = possible_diversion_points(field_size, trace, &obstacles).len();
 

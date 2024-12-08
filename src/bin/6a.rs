@@ -1,7 +1,7 @@
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 use std::io::stdin;
 use std::ops::Add;
-use itertools::Itertools;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 struct Coordinates {
@@ -54,12 +54,9 @@ impl Direction {
 }
 
 fn parse_char_matrix() -> Vec<Vec<char>> {
-    let matrix: Vec<Vec<char>> = stdin().lines()
-        .map(|line_res|
-            line_res.expect("stream error")
-                .chars()
-                .collect()
-        )
+    let matrix: Vec<Vec<char>> = stdin()
+        .lines()
+        .map(|line_res| line_res.expect("stream error").chars().collect())
         .collect();
 
     assert!(matrix.iter().map(|row| row.len()).all_equal());
@@ -79,9 +76,11 @@ fn get_field_size(matrix: &[Vec<char>]) -> Coordinates {
 }
 
 fn get_guard_position(matrix: &[Vec<char>]) -> Coordinates {
-    let (x, y) = matrix.iter().enumerate().find_map(|(y, row)| {
-        row.iter().position(|&c| c == '^').map(|x| (x, y))
-    }).expect("no guard found");
+    let (x, y) = matrix
+        .iter()
+        .enumerate()
+        .find_map(|(y, row)| row.iter().position(|&c| c == '^').map(|x| (x, y)))
+        .expect("no guard found");
 
     Coordinates {
         x: x as i64,
@@ -90,20 +89,29 @@ fn get_guard_position(matrix: &[Vec<char>]) -> Coordinates {
 }
 
 fn get_obstacles(matrix: &[Vec<char>]) -> HashSet<Coordinates> {
-    matrix.iter().enumerate().flat_map(|(y, row)| {
-        row.iter().enumerate().filter_map(move |(x, &c)| {
-            if c == '#' {
-                Some(Coordinates { x: x as i64, y: y as i64 })
-            } else {
-                None
-            }
+    matrix
+        .iter()
+        .enumerate()
+        .flat_map(|(y, row)| {
+            row.iter().enumerate().filter_map(move |(x, &c)| {
+                if c == '#' {
+                    Some(Coordinates {
+                        x: x as i64,
+                        y: y as i64,
+                    })
+                } else {
+                    None
+                }
+            })
         })
-    }).collect()
+        .collect()
 }
 
-
-
-fn generate_trace(field_size: Coordinates, obstacles: HashSet<Coordinates>, start_position: Coordinates) -> Vec<Coordinates> {
+fn generate_trace(
+    field_size: Coordinates,
+    obstacles: HashSet<Coordinates>,
+    start_position: Coordinates,
+) -> Vec<Coordinates> {
     let mut trace = vec![start_position];
     let mut current_pos = start_position;
     let mut direction = Direction::Up;
