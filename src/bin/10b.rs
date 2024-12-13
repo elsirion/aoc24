@@ -95,10 +95,7 @@ fn get_paths_from_point(
 fn coords_iter(bounds: Coordinates) -> impl Iterator<Item = Coordinates> {
     (0..bounds.y)
         .cartesian_product(0..bounds.x)
-        .map(|(y, x)| Coordinates {
-            x,
-            y,
-        })
+        .map(|(y, x)| Coordinates { x, y })
 }
 
 fn matrix_to_dag(matrix: &[Vec<u8>]) -> Dag<(), ()> {
