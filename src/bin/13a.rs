@@ -1,0 +1,178 @@
+use itertools::Itertools;
+use std::fmt::{Debug, Formatter};
+use std::iter::once;
+use std::ops::{Add, Mul, Sub};
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct Coordinates {
+    x: i64,
+    y: i64,
+}
+
+impl Coordinates {
+    fn is_within_bounds_inclusive(&self, bounds: Coordinates) -> bool {
+        self.x >= 0 && self.y >= 0 && self.x <= bounds.x && self.y <= bounds.y
+    }
+
+    fn divided_by(&self, other: Coordinates) -> Option<i64> {
+        let no_remainder = {
+            let x_rem = self.x % other.x;
+            let y_rem = self.y % other.y;
+            x_rem == 0 && y_rem == 0
+        };
+
+        if !no_remainder {
+            return None;
+        }
+
+        let x_quot = self.x / other.x;
+        let y_quot = self.y / other.y;
+        (x_quot == y_quot).then_some(x_quot)
+    }
+}
+
+impl Debug for Coordinates {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(x={}, y={})", self.x, self.y)
+    }
+}
+
+impl Add for Coordinates {
+    type Output = Coordinates;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Coordinates {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
+
+impl Sub for Coordinates {
+    type Output = Coordinates;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Coordinates {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+
+impl Mul<u64> for Coordinates {
+    type Output = Coordinates;
+
+    fn mul(self, rhs: u64) -> Self::Output {
+        Coordinates {
+            x: self.x * rhs as i64,
+            y: self.y * rhs as i64,
+        }
+    }
+}
+
+const COST_BUTTON_A: u64 = 3;
+const COST_BUTTON_B: u64 = 1;
+
+#[derive(Debug, Clone, Copy)]
+struct Machine {
+    a_rel_move: Coordinates,
+    b_rel_move: Coordinates,
+    prize: Coordinates,
+}
+
+fn parse_input<'a>(lines: impl Iterator<Item = &'a str>) -> Vec<Machine> {
+    let button_regex =
+        regex::Regex::new("Button ([AB]): X\\+([0-9]+), Y\\+([0-9]+)").expect("Valid regex");
+    let parse_button_line = move |line: &str| {
+        button_regex.captures(line).map(|cap| {
+            let x = cap.get(2).unwrap().as_str().parse().unwrap();
+            let y = cap.get(3).unwrap().as_str().parse().unwrap();
+            Coordinates { x, y }
+        })
+    };
+
+    let prize_regex = regex::Regex::new("Prize: X=([0-9]+), Y=([0-9]+)").expect("Valid regex");
+    let parse_prize_line = move |line: &str| {
+        prize_regex.captures(line).map(|cap| {
+            let x = cap.get(1).unwrap().as_str().parse().unwrap();
+            let y = cap.get(2).unwrap().as_str().parse().unwrap();
+            Coordinates { x, y }
+        })
+    };
+
+    lines
+        .tuples()
+        .map(|(l1, l2, l3, l4)| {
+            assert_eq!(l4, "");
+            Machine {
+                a_rel_move: parse_button_line(l1).unwrap(),
+                b_rel_move: parse_button_line(l2).unwrap(),
+                prize: parse_prize_line(l3).unwrap(),
+            }
+        })
+        .collect()
+}
+
+fn min_price_steps(machine: &Machine) -> Option<(u64, u64)> {
+    (0u64..)
+        .take_while(|&a_count| {
+            (machine.a_rel_move * a_count).is_within_bounds_inclusive(machine.prize)
+        })
+        .find_map(|a_count| {
+            let remaining_dist = machine.prize - (machine.a_rel_move * a_count);
+            let b_count: u64 = remaining_dist
+                .divided_by(machine.b_rel_move)?
+                .try_into()
+                .expect("should not be negative");
+            Some((a_count, b_count))
+        })
+}
+
+fn max_prizes_min_tokens(machines: &[Machine]) -> u64 {
+    machines
+        .iter()
+        .filter_map(|machine| {
+            let (a_count, b_count) = min_price_steps(machine)?;
+            Some(a_count * COST_BUTTON_A + b_count * COST_BUTTON_B)
+        })
+        .sum()
+}
+
+fn main() {
+    let lines = std::io::stdin()
+        .lines()
+        .map(Result::unwrap)
+        .chain(once(String::new()))
+        .collect::<Vec<_>>();
+    let machines = parse_input(lines.iter().map(|s| s.as_str()));
+    let result = max_prizes_min_tokens(&machines);
+    println!("Min tokens: {}", result);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parse_input;
+
+    #[test]
+    fn sample() {
+        let sample_input = "Button A: X+94, Y+34
+Button B: X+22, Y+67
+Prize: X=8400, Y=5400
+
+Button A: X+26, Y+66
+Button B: X+67, Y+21
+Prize: X=12748, Y=12176
+
+Button A: X+17, Y+86
+Button B: X+84, Y+37
+Prize: X=7870, Y=6450
+
+Button A: X+69, Y+23
+Button B: X+27, Y+71
+Prize: X=18641, Y=10279
+";
+
+        let input = parse_input(sample_input.lines());
+        assert_eq!(super::max_prizes_min_tokens(&input), 480);
+    }
+}
