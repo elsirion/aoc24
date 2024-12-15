@@ -126,16 +126,15 @@ fn min_price_steps(machine: &Machine) -> Option<(u64, u64)> {
     let x = machine.prize.x;
     let y = machine.prize.y;
 
-    let a = (yb*x - xb*y) / (xa*yb - xb*ya);
-    let b = (xa*y - ya*x) / (xa*yb - xb*ya);
+    let a = (yb * x - xb * y) / (xa * yb - xb * ya);
+    let b = (xa * y - ya * x) / (xa * yb - xb * ya);
 
-    if x == xa*a + xb*b && y == ya*a + yb*b {
+    if x == xa * a + xb * b && y == ya * a + yb * b {
         Some((a as u64, b as u64))
     } else {
         None
     }
 }
-
 
 fn max_prizes_min_tokens(machines: &[Machine]) -> u64 {
     machines
@@ -147,12 +146,15 @@ fn max_prizes_min_tokens(machines: &[Machine]) -> u64 {
         .sum()
 }
 
-fn apply_offset(machines: impl IntoIterator<Item=Machine>) -> Vec<Machine> {
-    machines.into_iter().map(|machine| Machine {
-        a_rel_move: machine.a_rel_move,
-        b_rel_move: machine.b_rel_move,
-        prize: machine.prize + PRIZE_OFFSET,
-    }).collect()
+fn apply_offset(machines: impl IntoIterator<Item = Machine>) -> Vec<Machine> {
+    machines
+        .into_iter()
+        .map(|machine| Machine {
+            a_rel_move: machine.a_rel_move,
+            b_rel_move: machine.b_rel_move,
+            prize: machine.prize + PRIZE_OFFSET,
+        })
+        .collect()
 }
 
 fn main() {
